@@ -1,8 +1,8 @@
 // Datos iniciales. Se ejecuta automáticamente si la base está vacía.
 // `node server/seed.js --demo` agrega además huéspedes y reservas de ejemplo.
-import { get, run, insert, tx } from './db.js';
-import { hashPassword, today, addDays } from './lib/core.js';
-import { createReservation, syncLodgingCharges, addPayment } from './lib/booking.js';
+import { get, run, insert, tx, DEMO } from './db.js';
+import { hashPassword, today, addDays, getSettings, saveSetting } from './lib/core.js';
+import { createReservation, syncLodgingCharges, addPayment, postCharge } from './lib/booking.js';
 
 export function seedIfEmpty({ demo = false } = {}) {
   if (get('SELECT COUNT(*) AS n FROM users').n > 0) return false;
@@ -56,6 +56,59 @@ function seedDemo() {
       syncLodgingCharges(id, admin);
     }
     addPayment({ reservation_id: r1, method: 'transfer', amount: 150000, kind: 'advance' }, admin);
+  });
+  if (DEMO) seedShowcase(admin);
+}
+
+// Datos ficticios adicionales para la demostración pública.
+function seedShowcase(admin) {
+  const t = today();
+  const room = (n) => get('SELECT id FROM rooms WHERE number = ?', n).id;
+  saveSetting('hotel', { ...getSettings().hotel, name: 'Hotel Casa del Río', legal_name: 'Casa del Río S.A.S. (ficticio)', city: 'Villa de Leyva', department: 'Boyacá' });
+  saveSetting('compliance', { ...getSettings().compliance, sire_establishment_code: '00000', sire_country_codes: { US: '000', FR: '000', ES: '000' } });
+  const people = [
+    ['Valentina', 'Rojas', 'CC', '1032456789', 'CO', '102', -2, 2, 'whatsapp', true],
+    ['Andrés', 'Castaño', 'CC', '80123456', 'CO', '201', -1, 3, 'phone', true],
+    ['Sophie', 'Martin', 'PA', '18FR45231', 'FR', '302', -3, 4, 'ota', true, 'Booking.com'],
+    ['Daniela', 'Ortiz', 'CC', '1098765432', 'CO', '203', 0, 2, 'walk_in', false],
+    ['Mateo', 'Herrera', 'CC', '1015478963', 'CO', '103', 1, 3, 'whatsapp', false],
+    ['Lucía', 'Fernández', 'PA', 'XDA778812', 'ES', '204', 2, 6, 'agency', false, 'Viajes Andinos'],
+    ['Camilo', 'Vargas', 'CC', '79845612', 'CO', '201', 5, 7, 'phone', false],
+    ['Paula', 'Mejía', 'CC', '52789456', 'CO', '102', 3, 5, 'whatsapp', false],
+    ['Esteban', 'Quintero', 'CC', '1020304099', 'CO', '302', 8, 11, 'ota', false, 'Airbnb'],
+    ['Natalia', 'Suárez', 'CC', '43567891', 'CO', '103', 6, 9, 'walk_in', false],
+  ];
+  tx(() => {
+    const inHouse = [];
+    for (const [first_name, last_name, doc_type, doc_number, nat, num, a, b, source, checkin, detail] of people) {
+      const foreign = nat !== 'CO';
+      const gid = insert('guests', {
+        first_name, last_name, doc_type, doc_number, nationality: nat, residence_country: nat, resides_abroad: foreign ? 1 : 0,
+        phone: '3' + doc_number.replace(/\D/g, '').padEnd(9, '0').slice(0, 9), birth_date: foreign ? '1989-05-14' : null,
+      });
+      const id = createReservation({ guest_id: gid, room_ids: [room(num)], check_in: addDays(t, a), check_out: addDays(t, b), adults: 2, source, source_detail: detail }, admin);
+      if (!['ota', 'agency'].includes(source)) addPayment({ reservation_id: id, method: 'transfer', amount: 100000, kind: 'advance' }, admin);
+      if (checkin) {
+        run(`UPDATE reservations SET status = 'checked_in', checked_in_at = datetime('now'), checked_in_by = ?, tax_exempt = ?,
+             travel_reason = 'Vacaciones / ocio', origin_city = 'Bogotá', destination_city = 'Villa de Leyva' WHERE id = ?`, admin.id, foreign ? 1 : 0, id);
+        syncLodgingCharges(id, admin);
+        inHouse.push(id);
+        if (num === '201') insert('reservation_vehicles', { reservation_id: id, plate: 'KLM482', kind: 'car', color: 'Gris', brand: 'Mazda 3', parking_space_id: 3 });
+      }
+    }
+    // Consumos y servicios cargados a la habitación
+    const beer = get(`SELECT * FROM products WHERE name LIKE 'Cerveza%'`);
+    for (const id of inHouse.slice(0, 2)) {
+      postCharge(id, { category: 'product', description: beer.name, quantity: 2, unit_price: beer.price }, admin, { silent: true });
+      postCharge(id, { category: 'service', description: 'Desayuno', quantity: 2, unit_price: 18000 }, admin, { silent: true });
+      run('UPDATE products SET stock = stock - 2 WHERE id = ?', beer.id);
+    }
+    run(`UPDATE rooms SET housekeeping = 'dirty' WHERE number = '103'`);
+    run(`UPDATE rooms SET housekeeping = 'in_progress' WHERE number = '104'`);
+    run(`UPDATE rooms SET out_of_service = 1, out_of_service_reason = 'Revisión del calentador' WHERE number = '202'`);
+    insert('housekeeping_tasks', { room_id: room('103'), kind: 'checkout', notes: 'Salida', created_by: admin.id });
+    const f = insert('feedback', { reservation_id: inHouse[0], guest_id: get('SELECT guest_id FROM reservations WHERE id = ?', inHouse[0]).guest_id, kind: 'complaint', subject: 'Ruido en la noche', description: 'El huésped reporta ruido desde la calle.', status: 'in_progress', created_by: admin.id });
+    insert('feedback_updates', { feedback_id: f, note: 'Se ofreció cambio a habitación interior.', status: 'in_progress', created_by: admin.id });
   });
 }
 

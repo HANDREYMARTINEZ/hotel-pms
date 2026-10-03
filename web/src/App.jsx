@@ -48,6 +48,7 @@ const NAV = [
 export default function App() {
   const [user, setUser] = useState(null);
   const [perms, setPerms] = useState([]);
+  const [demo, setDemo] = useState(false);
   const [settings, setSettings] = useState(null);
   const [booting, setBooting] = useState(!!getToken());
   const [toasts, setToasts] = useState([]);
@@ -67,7 +68,7 @@ export default function App() {
   const loadSession = useCallback(async () => {
     try {
       const me = await api.get('/auth/me');
-      setUser(me.user); setPerms(me.permissions);
+      setUser(me.user); setPerms(me.permissions); setDemo(!!me.demo);
       setSettings(await api.get('/settings'));
     } catch { setToken(null); setUser(null); }
     finally { setBooting(false); }
@@ -80,9 +81,9 @@ export default function App() {
 
   const can = useCallback((p) => perms.includes('*') || perms.includes(p), [perms]);
   const ctx = useMemo(() => ({
-    user, can, settings, toast, logout,
+    user, can, settings, toast, logout, demo,
     reloadSettings: async () => setSettings(await api.get('/settings')),
-  }), [user, can, settings, toast, logout]);
+  }), [user, can, settings, toast, logout, demo]);
 
   // Página pública de encuesta (sin sesión)
   if (location.pathname.startsWith('/encuesta/')) {
@@ -131,7 +132,7 @@ export default function App() {
 }
 
 function Layout({ children }) {
-  const { user, can, settings, logout } = useApp();
+  const { user, can, settings, logout, demo } = useApp();
   const location = useLocation();
   const [more, setMore] = useState(false);
   const nav = useNavigate();
@@ -160,7 +161,7 @@ function Layout({ children }) {
           </div>
         </div>
       </aside>
-      <main className="main">{children}</main>
+      <main className="main">{demo && <div className="demo-banner">Demostración con datos ficticios · los cambios se reinician periódicamente</div>}{children}</main>
       <nav className="bottomnav">
         {mobile.map(([to, label, I]) => <NavLink key={to} to={to} end={to === '/'}><I size={22} />{label}</NavLink>)}
         <button onClick={() => setMore(true)}><MoreHorizontal size={22} />Más</button>

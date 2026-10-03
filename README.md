@@ -44,6 +44,18 @@ Desarrollo con recarga: `npm run dev` (API en :3000) y `npm run dev:web` (Vite e
 
 Copia de seguridad: copie la carpeta `data/` (base de datos + fotos y documentos).
 
+### Demostración en Vercel
+
+El repositorio se despliega en Vercel como **demostración pública**: el frontend se sirve como estático (`web/dist`) y la API corre como
+función (`api/index.js` → `server/app.js`). Vercel no tiene disco permanente, así que en ese entorno (`VERCEL` o `DEMO_MODE=1`):
+
+- la base vive en `/tmp` y se recrea con datos ficticios cada vez que arranca una instancia;
+- el login muestra accesos de demostración y la app un aviso de datos ficticios;
+- no se permite cambiar usuarios, contraseñas ni credenciales de facturación;
+- las sesiones van firmadas para valer en cualquier instancia (`SESSION_SECRET` opcional).
+
+Para operar un hotel real hay que usar el servidor Node (`npm start`) con disco persistente, o migrar la base a un servicio en la nube.
+
 ## Estructura
 
 ```

@@ -285,3 +285,4 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 }
 .hk-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 .grid > .card + .card { margin-top: 0; }
+.demo-banner { background: var(--warn-soft); color: #7c3f06; border-radius: 10px; padding: 8px 12px; font-size: 13px; margin-bottom: 14px; text-align: center; }

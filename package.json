@@ -1,7 +1,7 @@
 {
   "name": "hotel-pms",
   "version": "1.0.0",
-  "description": "",
+  "description": "Sistema de gestión hotelera (PMS) para un hotel pequeño en Colombia",
   "main": "index.js",
   "scripts": {
     "dev": "node --watch server/index.js",
@@ -25,5 +25,8 @@
     "@vitejs/plugin-react": "^6.1.1",
     "vite": "^8.3.2"
   },
-  "type": "module"
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  }
 }

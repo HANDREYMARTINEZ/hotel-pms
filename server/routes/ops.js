@@ -1,7 +1,7 @@
 // Dashboard, limpieza y postventa (encuestas, comentarios y reclamos).
 import { Router } from 'express';
 import { all, get, run, insert, parseJSON } from '../db.js';
-import { wrap, fail, requirePerm, audit, today, getSettings, can, verifyPassword } from '../lib/core.js';
+import { wrap, fail, requirePerm, audit, today, getSettings, can, verifyPassword, DEMO } from '../lib/core.js';
 import { roomBoard } from './rooms.js';
 
 export const router = Router();
@@ -29,7 +29,7 @@ router.get('/dashboard', requirePerm('dashboard', 'housekeeping'), wrap((req, re
   const alerts = [];
   const defaults = [['admin', 'admin123'], ['recepcion', 'recepcion123'], ['limpieza', 'limpieza123']]
     .filter(([u, p]) => { const row = get('SELECT password_hash FROM users WHERE username = ? AND active = 1', u); return row && verifyPassword(p, row.password_hash); });
-  if (defaults.length && can(req.user, 'users')) alerts.push({ level: 'warn', text: `Cambie las contraseñas iniciales (${defaults.map((d) => d[0]).join(', ')})`, link: '/configuracion' });
+  if (defaults.length && !DEMO && can(req.user, 'users')) alerts.push({ level: 'warn', text: `Cambie las contraseñas iniciales (${defaults.map((d) => d[0]).join(', ')})`, link: '/configuracion' });
   const overdue = all(`SELECT r.id, r.code FROM reservations r WHERE r.status = 'checked_in' AND r.check_out < ?`, t);
   if (overdue.length) alerts.push({ level: 'warn', text: `${overdue.length} huésped(es) con salida vencida`, link: '/reservas?estado=checked_in' });
   const noShows = all(`SELECT id FROM reservations WHERE status IN ('pending','confirmed') AND check_in < ?`, t);

@@ -1,6 +1,8 @@
 // Configuración, fechas, autenticación, permisos y auditoría.
 import crypto from 'node:crypto';
-import { all, get, run, insert, parseJSON } from '../db.js';
+import { all, get, run, insert, parseJSON, DEMO } from '../db.js';
+
+export { DEMO };
 
 // ---------- configuración ----------
 export const DEFAULT_SETTINGS = {
@@ -106,11 +108,24 @@ export function verifyPassword(pw, stored) {
   const h = crypto.scryptSync(pw, salt, 64);
   return crypto.timingSafeEqual(h, Buffer.from(hash, 'hex'));
 }
+// Los tokens van firmados (usuario.vence.aleatorio.firma). En modo demo, donde cada
+// instancia tiene su propia base, la firma permite aceptar la sesión en cualquier instancia.
+const SECRET = process.env.SESSION_SECRET || (DEMO ? 'hotel-pms-demo' : crypto.randomBytes(32).toString('hex'));
+const sign = (s) => crypto.createHmac('sha256', SECRET).update(s).digest('hex').slice(0, 32);
 export function createSession(userId) {
-  const token = crypto.randomBytes(32).toString('hex');
-  const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 14).toISOString();
-  run('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)', token, userId, expires);
+  const exp = Date.now() + 1000 * 60 * 60 * 24 * 14;
+  const body = `${userId}.${exp}.${crypto.randomBytes(16).toString('hex')}`;
+  const token = `${body}.${sign(body)}`;
+  run('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)', token, userId, new Date(exp).toISOString());
   return token;
+}
+function signedUserId(token) {
+  const parts = token.split('.');
+  if (parts.length !== 4) return null;
+  const body = parts.slice(0, 3).join('.');
+  const sig = Buffer.from(sign(body)); const given = Buffer.from(parts[3]);
+  if (sig.length !== given.length || !crypto.timingSafeEqual(sig, given) || Number(parts[1]) < Date.now()) return null;
+  return Number(parts[0]);
 }
 
 // Permisos por rol. Las rutas declaran qué permiso requieren.
@@ -131,10 +146,14 @@ export function authMiddleware(req, res, next) {
   const h = req.headers.authorization || '';
   const token = h.startsWith('Bearer ') ? h.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'No autenticado' });
-  const row = get(
+  let row = get(
     `SELECT u.id, u.name, u.username, u.role, u.active, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?`,
     String(token),
   );
+  if (!row && DEMO) {
+    const uid = signedUserId(String(token));
+    if (uid) row = get(`SELECT id, name, username, role, active, '9999' AS expires_at FROM users WHERE id = ?`, uid);
+  }
   if (!row || !row.active || row.expires_at < new Date().toISOString()) return res.status(401).json({ error: 'Sesión expirada' });
   req.user = { id: row.id, name: row.name, username: row.username, role: row.role };
   req.token = String(token);

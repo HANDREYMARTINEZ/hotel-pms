@@ -5,7 +5,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+// Modo demostración (Vercel): sin disco permanente, los datos viven en /tmp y se
+// regeneran con datos ficticios cada vez que arranca una instancia.
+export const DEMO = process.env.DEMO_MODE === '1' || !!process.env.VERCEL;
+export const DATA_DIR = process.env.DATA_DIR || (process.env.VERCEL ? '/tmp/hotel-data' : path.join(__dirname, '..', 'data'));
+if (process.env.VERCEL) fs.rmSync(DATA_DIR, { recursive: true, force: true });
 export const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 

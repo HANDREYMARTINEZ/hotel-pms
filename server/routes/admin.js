@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import { all, get, run, insert, update, UPLOAD_DIR } from '../db.js';
 import {
   wrap, fail, hashPassword, verifyPassword, createSession, authMiddleware, requirePerm, audit,
-  getSettings, saveSetting, DEFAULT_SETTINGS, PERMISSIONS,
+  getSettings, saveSetting, DEFAULT_SETTINGS, PERMISSIONS, DEMO,
 } from '../lib/core.js';
 
 export const PUBLIC_DIR = path.join(UPLOAD_DIR, 'public');
@@ -54,12 +54,12 @@ publicRouter.post('/auth/login', wrap((req, res) => {
 
 publicRouter.get('/public/hotel', wrap((req, res) => {
   const s = getSettings();
-  res.json({ name: s.hotel.name, logo: s.hotel.logo, online_booking: s.online_booking.enabled });
+  res.json({ name: s.hotel.name, logo: s.hotel.logo, online_booking: s.online_booking.enabled, demo: DEMO });
 }));
 
 router.use(authMiddleware);
 
-router.get('/auth/me', (req, res) => res.json({ user: req.user, permissions: PERMISSIONS[req.user.role] }));
+router.get('/auth/me', (req, res) => res.json({ user: req.user, permissions: PERMISSIONS[req.user.role], demo: DEMO }));
 router.post('/auth/logout', wrap((req, res) => {
   run('DELETE FROM sessions WHERE token = ?', req.token);
   res.json({ ok: true });

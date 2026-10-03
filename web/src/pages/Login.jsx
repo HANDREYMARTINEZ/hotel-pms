@@ -27,6 +27,16 @@ export default function Login({ onLogin }) {
         <Input label="Usuario" value={form.username} onChange={(v) => setForm({ ...form, username: v })} autoFocus autoComplete="username" autoCapitalize="none" />
         <Input label="Contraseña" type="password" value={form.password} onChange={(v) => setForm({ ...form, password: v })} autoComplete="current-password" />
         <button className="btn primary lg block" disabled={busy || !form.username || !form.password}>{busy ? 'Ingresando…' : 'Ingresar'}</button>
+        {hotel?.demo && (
+          <div className="alert info" style={{ flexDirection: 'column', gap: 8 }}>
+            <div><b>Demostración con datos ficticios.</b> Elija un rol para entrar:</div>
+            <div className="row">
+              {[['admin', 'admin123', 'Administrador'], ['recepcion', 'recepcion123', 'Recepción'], ['limpieza', 'limpieza123', 'Limpieza']].map(([u, p, l]) => (
+                <button key={u} type="button" className="btn sm" onClick={() => setForm({ username: u, password: p })}>{l}</button>
+              ))}
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );
