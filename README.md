@@ -2,6 +2,23 @@
 
 Panel de administración para un hotel pequeño en Colombia (≈10 habitaciones), en español y COP, pensado para usarse desde el celular.
 
+**Estado:** en curso · Caso de estudio: https://andreymartinezportafolio.vercel.app/proyectos/hotel-pms
+
+| Inicio del día | Calendario de reservas |
+|---|---|
+| ![Inicio](docs/capturas/01-inicio.png) | ![Calendario](docs/capturas/02-reservas-calendario.png) |
+| **Check-in por pasos** | **Cuenta del huésped** |
+| ![Check-in](docs/capturas/05-checkin.png) | ![Cuenta](docs/capturas/04-cuenta-huesped.png) |
+| **Punto de venta** | **Reportes** |
+| ![Ventas](docs/capturas/08-ventas.png) | ![Reportes](docs/capturas/10-reportes.png) |
+
+<p>
+  <img src="docs/capturas/21-movil-limpieza.png" alt="Limpieza en el celular" width="220" />
+  <img src="docs/capturas/22-movil-calendario.png" alt="Calendario en el celular" width="220" />
+</p>
+
+*Capturas con datos ficticios.*
+
 ## Puesta en marcha
 
 Requisitos: Node.js 22.13 o superior (usa el módulo SQLite nativo `node:sqlite`; no hay que compilar nada).
