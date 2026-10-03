@@ -5,7 +5,7 @@ import { all, get, run, insert, update, parseJSON, tx } from '../db.js';
 import { wrap, fail, requirePerm, audit, today, addDays, getSettings, can, isDate } from '../lib/core.js';
 import {
   createReservation, setReservationRooms, syncLodgingCharges, folio, postCharge, voidCharge, addPayment,
-  estimatedBalance, isRoomAvailable,
+  estimatedBalance, isRoomAvailable, quoteRoom,
 } from '../lib/booking.js';
 import { upsertGuest } from './guests.js';
 import { receiptPdf } from '../lib/pdf.js';
@@ -221,7 +221,16 @@ router.post('/reservations/:id/checkout/preview', requirePerm('checkin'), wrap((
   const id = Number(req.params.id);
   const r = get('SELECT * FROM reservations WHERE id = ?', id);
   if (!r || r.status !== 'checked_in') fail(400, 'La reserva no está en casa');
-  res.json({ planned_check_out: r.check_out, today: today(), early: r.check_out > today(), late: r.check_out < today() });
+  const t = today();
+  const actualOut = t <= r.check_in ? addDays(r.check_in, 1) : t;
+  // Re-cotiza con la salida real: al acortar la estadía puede perderse el descuento por estadía larga.
+  const s = getSettings();
+  const rate = r.tax_exempt && s.taxes.prices_include_tax ? s.taxes.lodging_rate : 0;
+  let lodging = 0;
+  for (const rm of resvRooms(id)) {
+    for (const n of quoteRoom(rm.room_id, r.check_in, actualOut).nights) lodging += rate ? Math.round(n.price / (1 + rate / 100)) : n.price;
+  }
+  res.json({ planned_check_out: r.check_out, actual_check_out: actualOut, lodging });
 }));
 
 router.post('/reservations/:id/checkout', requirePerm('checkin'), wrap((req, res) => {

@@ -77,7 +77,7 @@ export default function ReservationDetail() {
                     <h3 className="mb mt"><Car size={15} style={{ verticalAlign: -2 }} /> Vehículos</h3>
                     {r.vehicles.map((v) => <div key={v.id} className="list-item" style={{ padding: '8px 0' }}><b className="grow">{v.plate}</b><span className="muted">{VEHICLE_TYPES[v.kind]} {v.brand} {v.color}{v.parking_code ? ' · espacio ' + v.parking_code : ''}</span></div>)}
                   </>}
-                  {r.travel_reason && <div className="muted mt" style={{ fontSize: 13 }}>Motivo: {r.travel_reason} · Procedencia: {r.origin_city || '—'} · Destino: {r.destination_city || '—'}</div>}
+                  {r.travel_reason && <><h3 className={'mb' + (r.companions.length || r.vehicles.length ? ' mt' : '')}>Datos del viaje</h3><div className="muted" style={{ fontSize: 13 }}>Motivo: {r.travel_reason} · Procedencia: {r.origin_city || '—'} · Destino: {r.destination_city || '—'}</div></>}
                 </div>
               )}
               {r.notes && <div className="card"><h3 className="mb">Notas</h3><div style={{ whiteSpace: 'pre-wrap' }}>{r.notes}</div></div>}

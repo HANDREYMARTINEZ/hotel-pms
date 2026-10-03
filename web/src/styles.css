@@ -284,3 +284,4 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
   .main { padding: 0; }
 }
 .hk-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.grid > .card + .card { margin-top: 0; }

@@ -1,9 +1,9 @@
 // Check-out: cuenta final, cobro, recibo PDF y paso automático a limpieza.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { FileText, Plus, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { api, openFile } from '../api.js';
-import { useApp, useData, useAction, Loader, PageHead, Input, MoneyInput, Alert, money, fdate, todayStr, addDays, nights } from '../ui.jsx';
+import { useApp, useData, useAction, Loader, PageHead, Input, MoneyInput, Alert, money, fdate, todayStr, addDays } from '../ui.jsx';
 import { ChargeModal } from './ReservationDetail.jsx';
 
 export default function CheckOut() {
@@ -22,17 +22,17 @@ function Body({ r, reload }) {
   const actualOut = t <= r.check_in ? addDays(r.check_in, 1) : t;
   const s = r.folio.summary;
 
-  // Proyección de la cuenta si la salida real difiere de la programada.
-  const lodging = r.folio.charges.filter((c) => c.category === 'lodging' && !c.voided);
-  let adjust = 0;
-  if (actualOut < r.check_out) adjust = -lodging.filter((c) => c.service_date >= actualOut).reduce((a, c) => a + c.total, 0);
-  if (actualOut > r.check_out) {
-    const last = lodging[lodging.length - 1]?.total || 0;
-    adjust = last * nights(r.check_out, actualOut);
-  }
+  // Proyección de la cuenta con la salida real (el servidor re-cotiza las noches).
+  const [preview, setPreview] = useState(null);
+  const [payment, setPayment] = useState({ amount: '', method: methods[0]?.code, reference: '' });
+  const adjust = preview && actualOut !== r.check_out ? preview.lodging - s.lodging : 0;
   const projected = s.total + adjust;
   const due = projected - s.paid;
-  const [payment, setPayment] = useState({ amount: due > 0 ? due : '', method: methods[0]?.code, reference: '' });
+  useEffect(() => {
+    if (r.status !== 'checked_in') return;
+    api.post(`/reservations/${r.id}/checkout/preview`).then(setPreview).catch(() => setPreview({ lodging: s.lodging }));
+  }, [r.id, r.status, s.total]);
+  useEffect(() => { if (preview) setPayment((p) => ({ ...p, amount: due > 0 ? due : '' })); }, [preview, due]);
 
   if (r.status === 'checked_out') return <Done r={r} />;
   if (r.status !== 'checked_in') return <><PageHead title="Check-out" /><Alert kind="warn">La reserva no está en casa.</Alert></>;
@@ -52,9 +52,8 @@ function Body({ r, reload }) {
           <div className="card-head"><h2>Cuenta</h2><button className="btn sm" onClick={() => setCharge(true)}><Plus /> Agregar cargo</button></div>
           {actualOut !== r.check_out && (
             <div className="mb"><Alert kind="warn">
-              {actualOut < r.check_out
-                ? `Salida anticipada: la reserva era hasta el ${fdate(r.check_out)}. Se descontarán las noches no utilizadas (${money(-adjust)}).`
-                : `Salida tardía: estaba prevista el ${fdate(r.check_out)}. Se cargarán ${nights(r.check_out, actualOut)} noche(s) adicional(es) (aprox. ${money(adjust)}).`}
+              {actualOut < r.check_out ? `Salida anticipada: la reserva era hasta el ${fdate(r.check_out)}.` : `Salida tardía: estaba prevista el ${fdate(r.check_out)}.`}{' '}
+                Las noches se recalculan con la salida real ({adjust < 0 ? '-' : '+'}{money(Math.abs(adjust))}){actualOut < r.check_out ? '; si tenía descuento por estadía larga, puede dejar de aplicar' : ''}.
             </Alert></div>
           )}
           <div className="table-wrap"><table className="table"><tbody>
@@ -87,7 +86,7 @@ function Body({ r, reload }) {
             </>
           ) : <Alert kind="info">La cuenta está saldada.</Alert>}
           <small className="muted">Al confirmar, la habitación pasa a «limpieza» y se genera la encuesta de satisfacción.</small>
-          <button className="btn primary lg block" disabled={busy || (due > 0 && Number(payment.amount || 0) < due)} onClick={finish}>
+          <button className="btn primary lg block" disabled={busy || !preview || (due > 0 && Number(payment.amount || 0) < due)} onClick={finish}>
             <CheckCircle2 /> Confirmar check-out
           </button>
           <button className="btn block" onClick={() => openFile(`/reservations/${r.id}/receipt.pdf`)}><FileText /> Ver cuenta en PDF</button>

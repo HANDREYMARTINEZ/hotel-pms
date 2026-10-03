@@ -47,7 +47,7 @@ export default function Housekeeping() {
                     {r.arrival_today && <span className="row" style={{ gap: 4, color: 'var(--st-reserved)' }}><LogIn size={14} /> Llega hoy</span>}
                   </div>
                   {!!r.out_of_service && <small className="muted">{r.out_of_service_reason}</small>}
-                  {tasksFor(r.id).map((t) => <small key={t.id} className="muted">• {KIND[t.kind]}{t.notes ? `: ${t.notes}` : ''}{t.assigned_name ? ` (${t.assigned_name})` : ''}</small>)}
+                  {tasksFor(r.id).filter((t) => !(r.out_of_service && t.kind === 'maintenance')).map((t) => <small key={t.id} className="muted">• {KIND[t.kind]}{t.notes ? `: ${t.notes}` : ''}{t.assigned_name ? ` (${t.assigned_name})` : ''}</small>)}
                   {!r.out_of_service && (
                     <div className="hk-actions">
                       {r.housekeeping === 'dirty' && <button className="btn" disabled={busy} onClick={() => setHk(r, 'in_progress')}><Play /> Empezar</button>}
