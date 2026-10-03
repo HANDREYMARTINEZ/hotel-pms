@@ -2,7 +2,7 @@
 
 Panel de administración para un hotel pequeño en Colombia (≈10 habitaciones), en español y COP, pensado para usarse desde el celular.
 
-**Estado:** en curso · Caso de estudio: https://andreymartinezportafolio.vercel.app/proyectos/hotel-pms
+**Estado:** en curso · **Demo en línea:** https://hotel-pms-beryl.vercel.app (elija un rol al ingresar; datos ficticios) · Caso de estudio: https://andreymartinezportafolio.vercel.app/proyectos/hotel-pms
 
 | Inicio del día | Calendario de reservas |
 |---|---|
